@@ -10,6 +10,7 @@
 #include <string>
 #include <iostream>
 #include <memory>//Unique ptr
+#include <functional>//For function storage
 
 //Enumerators
 enum FlexDirection { COLUMN, ROW };
@@ -27,7 +28,20 @@ LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
 /*  Make the class name into a global variable  */
 TCHAR szClassName[ ] = _T("WhiteavocadoApp");
 
+void test() {
+    std::cout << "test\n";
+}
+
 std::vector<std::unique_ptr<frameObj>> frameObjects;
+
+void frameObjectSetup() {
+    menuItem file(point2(2, 2), point2(40, 18), point3(255, 0, 0), 1, "File", test);
+    std::vector<menuItem> menItems;
+    menItems.emplace_back(file);
+    menu mainMenu = menu(point2(0, 0), point2((50 * 16), 20), point3(0, 0, 0), menItems, "nav-bar", ROW);
+
+    frameObjects.emplace_back(std::make_unique<menu>(mainMenu));
+}
 
 int WINAPI WinMain (HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszArgument, int nCmdShow) {
     HWND hwnd;               /* This is the handle for our window */
@@ -57,34 +71,24 @@ int WINAPI WinMain (HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpsz
 
     /* The class is registered, let's create the program*/
     hwnd = CreateWindowEx (
-           0,                   /* Extended possibilites for variation */
-           szClassName,         /* Classname */
+           0,                               /* Extended possibilites for variation */
+           szClassName,                     /* Classname */
            _T("Whiteavocado Editor"),       /* Title Text */
-           WS_OVERLAPPEDWINDOW, /* default window */
-           CW_USEDEFAULT,       /* Windows decides the position */
-           CW_USEDEFAULT,       /* where the window ends up on the screen */
-           544,                 /* The programs width */
-           375,                 /* and height in pixels */
-           HWND_DESKTOP,        /* The window is a child-window to desktop */
-           NULL,                /* No menu */
-           hThisInstance,       /* Program Instance handler */
-           NULL                 /* No Window Creation data */
+           WS_OVERLAPPEDWINDOW,             /* default window */
+           CW_USEDEFAULT,                   /* Windows decides the position */
+           CW_USEDEFAULT,                   /* where the window ends up on the screen */
+           (50 * 16),                       /* The programs width */
+           (50 * 9),                        /* and height in pixels */
+           HWND_DESKTOP,                    /* The window is a child-window to desktop */
+           NULL,                            /* No menu */
+           hThisInstance,                   /* Program Instance handler */
+           NULL                             /* No Window Creation data */
            );
 
     /* Make the window visible on the screen */
     ShowWindow (hwnd, nCmdShow);
 
-    //Menu test setup
-    menuItem file(point2(10, 10), point2(110, 110), point3(255, 0, 0), 1, "File");
-
-    std::vector<menuItem> menItems;
-
-    menItems.emplace_back(file);
-
-    menu mainMenu = menu(point2(5, 5), point2(115, 115), point3(0, 255, 0), menItems, "bar-top", ROW);
-
-    frameObjects.emplace_back(std::make_unique<menu>(mainMenu));
-    //
+    frameObjectSetup();
 
     /* Run the message loop. It will run until GetMessage() returns 0 */
     while (GetMessage (&messages, NULL, 0, 0))
@@ -134,6 +138,9 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             HPEN hPen;
             HPEN hOldPen;
 
+            SetTextColor(hdc, RGB(0, 0, 0));
+            SetBkMode(hdc, TRANSPARENT);
+
             for (const auto& obj : frameObjects) {
                 const menu* menuObj = dynamic_cast<const menu*>(obj.get());
 
@@ -141,6 +148,12 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     drawBox(hdc, menuObj->getMin(), menuObj->getMax(), menuObj->getColor(), menuObj->getLineSize());
                     for (const auto& menItem : menuObj->getItems()) {
                         drawBox(hdc, menItem.getMin(), menItem.getMax(), menItem.getColor(), menItem.getLineSize());
+                        RECT textArea;
+                        textArea.left = menItem.getMin().x_i;
+                        textArea.top = menItem.getMin().y_i;
+                        textArea.right = menItem.getMax().x_i;
+                        textArea.bottom = menItem.getMax().y_i;
+                        DrawText(hdc, menItem.getPlaceholder().c_str(), -1, &textArea, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
                     }
                 }
             }
@@ -150,6 +163,22 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             SelectObject(hdc, hOldPen);
             DeleteObject(hPen);
             EndPaint(hwnd, &ps);
+        } break;
+        case WM_LBUTTONDOWN: {
+            int xPos = LOWORD(lParam);
+            int yPos = HIWORD(lParam);
+
+            for (const auto& obj : frameObjects) {
+                const menu* menuObj = dynamic_cast<const menu*>(obj.get());
+
+                if (menuObj) {
+                    for (const auto& menItem : menuObj->getItems()) {
+                        if (menItem.isClickable() && xPos >= menItem.getMin().x_i && xPos <= menItem.getMax().x_i && yPos >= menItem.getMin().y_i && yPos <= menItem.getMax().y_i) {
+                            menItem.click();
+                        }
+                    }
+                }
+            }
         } break;
         case WM_DESTROY:
             PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
