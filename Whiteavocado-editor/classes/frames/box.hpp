@@ -5,7 +5,7 @@ class box {
         point2 min_, max_;//Min x, y Max x, y
         int lineSize;
         point3 boxColor;//RGB format
-        bool clickable;
+        bool clickable, filled;
         std::function<void()> onclick;
 
     public:

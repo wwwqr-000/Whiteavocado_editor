@@ -26,16 +26,16 @@ enum FlexDirection { COLUMN, ROW };
 LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
 
 /*  Make the class name into a global variable  */
-
-HWND hwnd;
-
 TCHAR szClassName[ ] = _T("WhiteavocadoApp");
+
+//Global variables
+HWND hwnd;
+std::vector<std::unique_ptr<frameObj>> frameObjects;
+//
 
 void test() {
     std::cout << "test\n";
 }
-
-std::vector<std::unique_ptr<frameObj>> frameObjects;
 
 void updateScreen() {
     InvalidateRect(hwnd, NULL, TRUE);
@@ -53,18 +53,27 @@ void toggleMenu(std::string menuName) {
     }
 }
 
-void openFileBar() { toggleMenu("file-bar"); }
+void toggleFileBar() { toggleMenu("file-bar"); }
+void createNewFile() { std::cout << "create new file\n"; toggleFileBar(); }
+void openOtherFile() { std::cout << "Open file\n"; }
+void saveCurrentFile() { std::cout << "Save file\n"; }
 
 void frameObjectSetup() {
-    menuItem file(point2(2, 2), point2(40, 18), point3(255, 0, 0), 1, "File", openFileBar);
+    menuItem file(point2(2, 2), point2(40, 18), point3(229, 34, 255), 1, "File", toggleFileBar);
     std::vector<menuItem> menItems;
     menItems.emplace_back(file);
-    menu mainMenu = menu(point2(0, 0), point2((50 * 16), 20), point3(0, 0, 0), menItems, "nav-bar", ROW, true);
+    menu mainMenu(point2(0, 0), point2((50 * 16), 20), point3(0, 0, 0), menItems, "nav-bar", ROW, true);
 
     //File bar
     std::vector<menuItem> fileBarItems;
+    menuItem newFile(point2(2, 23), point2(118, 53), point3(0, 0, 0), 1, "New", createNewFile);
+    menuItem openFile(point2(2, 58), point2(118, 88), point3(0, 0, 0), 1, "Open", openOtherFile);
+    menuItem saveFile(point2(2, 93), point2(118, 123), point3(0, 0, 0), 1, "Save as", saveCurrentFile);
+    fileBarItems.emplace_back(newFile);
+    fileBarItems.emplace_back(openFile);
+    fileBarItems.emplace_back(saveFile);
 
-    menu fileMenu(point2(0, 21), point2(120, 301), point3(255, 0, 0), fileBarItems, "file-bar", COLUMN, false);
+    menu fileMenu(point2(0, 21), point2(120, 124), point3(0, 255, 0), fileBarItems, "file-bar", COLUMN, false);
     //
 
     frameObjects.emplace_back(std::make_unique<menu>(mainMenu));
@@ -72,7 +81,7 @@ void frameObjectSetup() {
 }
 
 int WINAPI WinMain (HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszArgument, int nCmdShow) {
-    //HWND hwnd;               /* This is the handle for our window */
+    //HWND hwnd;             /* This is the handle for our window */
     MSG messages;            /* Here messages to the application are saved */
     WNDCLASSEX wincl;        /* Data structure for the windowclass */
 
