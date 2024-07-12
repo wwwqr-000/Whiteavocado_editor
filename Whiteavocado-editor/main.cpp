@@ -8,8 +8,15 @@
 #include <windows.h>
 #include <vector>
 #include <string>
+#include <iostream>
+#include <memory>//Unique ptr
+
+//Enumerators
+enum FlexDirection { COLUMN, ROW };
+//
 
 #include "classes/dimensions.hpp"
+#include "classes/frameObj.hpp"
 #include "classes/frames/box.hpp"
 #include "classes/frames/menuItem.hpp"
 #include "classes/frames/menu.hpp"
@@ -20,7 +27,7 @@ LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
 /*  Make the class name into a global variable  */
 TCHAR szClassName[ ] = _T("WhiteavocadoApp");
 
-menu mainMenu(point2(0, 0), point2(10, 10), point3(0, 0, 0));
+std::vector<std::unique_ptr<frameObj>> frameObjects;
 
 int WINAPI WinMain (HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszArgument, int nCmdShow) {
     HWND hwnd;               /* This is the handle for our window */
@@ -68,13 +75,15 @@ int WINAPI WinMain (HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpsz
     ShowWindow (hwnd, nCmdShow);
 
     //Menu test setup
-    menuItem file(point2(10, 10), point2(110, 110), point3(255, 0, 0), "File");
+    menuItem file(point2(10, 10), point2(110, 110), point3(255, 0, 0), 1, "File");
 
     std::vector<menuItem> menItems;
 
     menItems.emplace_back(file);
 
-    mainMenu = menu(point2(5, 5), point2(115, 115), point3(0, 255, 0), menItems, "bar-top");
+    menu mainMenu = menu(point2(5, 5), point2(115, 115), point3(0, 255, 0), menItems, "bar-top", ROW);
+
+    frameObjects.emplace_back(std::make_unique<menu>(mainMenu));
     //
 
     /* Run the message loop. It will run until GetMessage() returns 0 */
@@ -90,6 +99,28 @@ int WINAPI WinMain (HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpsz
     return messages.wParam;
 }
 
+void drawBox(HDC& hdc, point2 min_, point2 max_, point3 rgb, int width) {
+    HPEN hPen;
+    HPEN hOldPen;
+
+    //Draw menuItem frame based on box
+    hPen = CreatePen(PS_SOLID, width, RGB(rgb.x_i, rgb.y_i, rgb.z_i));
+    hOldPen = (HPEN)SelectObject(hdc, hPen);
+
+    MoveToEx(hdc, min_.x_i, min_.y_i, NULL);//Top left -> Top right
+    LineTo(hdc, max_.x_i, min_.y_i);
+
+    MoveToEx(hdc, max_.x_i, min_.y_i, NULL);//Top right -> Bottom right
+    LineTo(hdc, max_.x_i, max_.y_i);
+
+    MoveToEx(hdc, max_.x_i, max_.y_i, NULL);//Bottom right -> Bottom left
+    LineTo(hdc, min_.x_i, max_.y_i);
+
+    MoveToEx(hdc, min_.x_i, max_.y_i, NULL);//Bottom left -> Top left
+    LineTo(hdc, min_.x_i, min_.y_i);
+    //
+}
+
 
 /*  This function is called by the Windows function DispatchMessage()  */
 
@@ -100,25 +131,21 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
         case WM_PAINT: {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
-            int width = 1;
-            HPEN hPen = CreatePen(PS_SOLID, width, RGB(0, 0, 0));
-            HPEN hOldPen = (HPEN)SelectObject(hdc, hPen);
+            HPEN hPen;
+            HPEN hOldPen;
 
-            for (auto& item : mainMenu.getItems()) {
-                //Draw menuItem frame based on box
-                MoveToEx(hdc, item.getMin().x_i, item.getMin().y_i, NULL);//Top left -> Top right
-                LineTo(hdc, item.getMax().x_i, item.getMin().y_i);
+            for (const auto& obj : frameObjects) {
+                const menu* menuObj = dynamic_cast<const menu*>(obj.get());
 
-                MoveToEx(hdc, item.getMax().x_i, item.getMin().y_i, NULL);//Top right -> Bottom right
-                LineTo(hdc, item.getMax().x_i, item.getMax().y_i);
-
-                MoveToEx(hdc, item.getMax().x_i, item.getMax().y_i, NULL);//Bottom right -> Bottom left
-                LineTo(hdc, item.getMin().x_i, item.getMax().y_i);
-
-                MoveToEx(hdc, item.getMin().x_i, item.getMax().y_i, NULL);//Bottom left -> Top left
-                LineTo(hdc, item.getMin().x_i, item.getMin().y_i);
-                //
+                if (menuObj) {
+                    drawBox(hdc, menuObj->getMin(), menuObj->getMax(), menuObj->getColor(), menuObj->getLineSize());
+                    for (const auto& menItem : menuObj->getItems()) {
+                        drawBox(hdc, menItem.getMin(), menItem.getMax(), menItem.getColor(), menItem.getLineSize());
+                    }
+                }
             }
+
+            //drawBox(hdc, point2(10, 10), point2(110, 110), point3(255, 0, 0), 1);
 
             SelectObject(hdc, hOldPen);
             DeleteObject(hPen);
