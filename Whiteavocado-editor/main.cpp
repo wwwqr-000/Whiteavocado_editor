@@ -26,6 +26,9 @@ enum FlexDirection { COLUMN, ROW };
 LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
 
 /*  Make the class name into a global variable  */
+
+HWND hwnd;
+
 TCHAR szClassName[ ] = _T("WhiteavocadoApp");
 
 void test() {
@@ -34,17 +37,42 @@ void test() {
 
 std::vector<std::unique_ptr<frameObj>> frameObjects;
 
+void updateScreen() {
+    InvalidateRect(hwnd, NULL, TRUE);
+}
+
+void toggleMenu(std::string menuName) {
+    for (auto& obj : frameObjects) {
+        menu* menuObj = dynamic_cast<menu*>(obj.get());
+
+        if (menuObj && menuObj->getName() == menuName) {
+            menuObj->setVisable(!menuObj->isVisable());
+            updateScreen();
+            std::cout << "changed visability\n";
+        }
+    }
+}
+
+void openFileBar() { toggleMenu("file-bar"); }
+
 void frameObjectSetup() {
-    menuItem file(point2(2, 2), point2(40, 18), point3(255, 0, 0), 1, "File", test);
+    menuItem file(point2(2, 2), point2(40, 18), point3(255, 0, 0), 1, "File", openFileBar);
     std::vector<menuItem> menItems;
     menItems.emplace_back(file);
-    menu mainMenu = menu(point2(0, 0), point2((50 * 16), 20), point3(0, 0, 0), menItems, "nav-bar", ROW);
+    menu mainMenu = menu(point2(0, 0), point2((50 * 16), 20), point3(0, 0, 0), menItems, "nav-bar", ROW, true);
+
+    //File bar
+    std::vector<menuItem> fileBarItems;
+
+    menu fileMenu(point2(0, 21), point2(120, 301), point3(255, 0, 0), fileBarItems, "file-bar", COLUMN, false);
+    //
 
     frameObjects.emplace_back(std::make_unique<menu>(mainMenu));
+    frameObjects.emplace_back(std::make_unique<menu>(fileMenu));
 }
 
 int WINAPI WinMain (HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszArgument, int nCmdShow) {
-    HWND hwnd;               /* This is the handle for our window */
+    //HWND hwnd;               /* This is the handle for our window */
     MSG messages;            /* Here messages to the application are saved */
     WNDCLASSEX wincl;        /* Data structure for the windowclass */
 
@@ -144,7 +172,7 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             for (const auto& obj : frameObjects) {
                 const menu* menuObj = dynamic_cast<const menu*>(obj.get());
 
-                if (menuObj) {
+                if (menuObj && menuObj->isVisable()) {
                     drawBox(hdc, menuObj->getMin(), menuObj->getMax(), menuObj->getColor(), menuObj->getLineSize());
                     for (const auto& menItem : menuObj->getItems()) {
                         drawBox(hdc, menItem.getMin(), menItem.getMax(), menItem.getColor(), menItem.getLineSize());
@@ -171,7 +199,7 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             for (const auto& obj : frameObjects) {
                 const menu* menuObj = dynamic_cast<const menu*>(obj.get());
 
-                if (menuObj) {
+                if (menuObj && menuObj->isVisable()) {
                     for (const auto& menItem : menuObj->getItems()) {
                         if (menItem.isClickable() && xPos >= menItem.getMin().x_i && xPos <= menItem.getMax().x_i && yPos >= menItem.getMin().y_i && yPos <= menItem.getMax().y_i) {
                             menItem.click();
