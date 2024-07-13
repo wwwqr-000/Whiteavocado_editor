@@ -70,7 +70,7 @@ void toggleMenu(std::string menuName) {
 
 //box onclick calls
 void toggleFileBar() { toggleMenu("file-bar"); }
-void createNewFile() { std::cout << "create new file\n"; addItemToMenu("tabs"); toggleFileBar(); }
+void createNewFile() { std::cout << "create new file\n"; toggleFileBar(); }
 void openOtherFile() { std::cout << "Open file\n"; }
 void saveCurrentFile() { std::cout << "Save file\n"; }
 void showHomeTab() { std::cout << "show home tab\n"; }
