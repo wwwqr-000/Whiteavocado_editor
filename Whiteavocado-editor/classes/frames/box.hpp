@@ -5,6 +5,7 @@ class box {
         point2 min_, max_;//Min x, y Max x, y
         int lineSize;
         point3 boxColor;//RGB format
+        bool borderEnabled;
         bool clickable, filled;
         std::function<void()> onclick;
 
@@ -15,7 +16,8 @@ class box {
         box(point2& min_, point2& max_, point3& boxColor) : min_(min_), max_(max_), boxColor(boxColor) {}
         box(point2& min_, point2& max_, int lineSize) : min_(min_), max_(max_), lineSize(lineSize) { this->lineSize = 1; }
         box(point2& min_, point2& max_, int lineSize, point3& boxColor) : min_(min_), max_(max_), lineSize(lineSize), boxColor(boxColor) {}
-        box(point2& min_, point2& max_, int lineSize, point3& boxColor, bool clickable, std::function<void()>& onclick) : min_(min_), max_(max_), lineSize(lineSize), boxColor(boxColor), clickable(clickable), onclick(onclick) {}
+        box(point2& min_, point2& max_, int lineSize, point3& boxColor, bool hasBorder) : min_(min_), max_(max_), lineSize(lineSize), boxColor(boxColor), borderEnabled(hasBorder) {}
+        box(point2& min_, point2& max_, int lineSize, point3& boxColor, bool clickable, std::function<void()>& onclick, bool borderEnabled) : min_(min_), max_(max_), lineSize(lineSize), boxColor(boxColor), clickable(clickable), onclick(onclick), borderEnabled(borderEnabled) {}
 
         point3 getColor() const { return this->boxColor; }
         bool setColor(point3& rgb) {
@@ -38,7 +40,8 @@ class box {
 
         void setClickable(bool clickable) { this->clickable = clickable; }
         bool isClickable() const { return this->clickable; }
-
         void click() const { return this->onclick(); }
+        bool hasBorder() const { return this->borderEnabled; }
+        void setBorderEnabled(bool borderEnabled) { this->borderEnabled = borderEnabled; }
 
 };

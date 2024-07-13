@@ -31,6 +31,7 @@ TCHAR szClassName[ ] = _T("WhiteavocadoApp");
 //Global variables
 HWND hwnd;
 std::vector<std::unique_ptr<frameObj>> frameObjects;
+int newTabCount = 1;//Home is also a tab
 //
 
 void test() {
@@ -39,6 +40,20 @@ void test() {
 
 void updateScreen() {
     InvalidateRect(hwnd, NULL, TRUE);
+}
+
+void addItemToMenu(std::string menuName) {
+    for (auto& obj : frameObjects) {
+        menu* menuObj = dynamic_cast<menu*>(obj.get());
+
+        if (menuObj && menuObj->getName() == menuName) {
+            menuItem newTab(point2(1, 21), point2(99, 39), point3(0, 0, 0), 1, ("newTab" + std::to_string(newTabCount)), test, true);
+            ++newTabCount;
+            menuObj->addItem(newTab);
+            updateScreen();
+            std::cout << "added new tab\n";
+        }
+    }
 }
 
 void toggleMenu(std::string menuName) {
@@ -53,31 +68,43 @@ void toggleMenu(std::string menuName) {
     }
 }
 
+//box onclick calls
 void toggleFileBar() { toggleMenu("file-bar"); }
-void createNewFile() { std::cout << "create new file\n"; toggleFileBar(); }
+void createNewFile() { std::cout << "create new file\n"; addItemToMenu("tabs"); toggleFileBar(); }
 void openOtherFile() { std::cout << "Open file\n"; }
 void saveCurrentFile() { std::cout << "Save file\n"; }
+void showHomeTab() { std::cout << "show home tab\n"; }
+//
 
 void frameObjectSetup() {
-    menuItem file(point2(2, 2), point2(40, 18), point3(229, 34, 255), 1, "File", toggleFileBar);
+    menuItem file(point2(2, 2), point2(40, 18), point3(0, 0, 0), 1, "File", toggleFileBar, false);
     std::vector<menuItem> menItems;
     menItems.emplace_back(file);
     menu mainMenu(point2(0, 0), point2((50 * 16), 20), point3(0, 0, 0), menItems, "nav-bar", ROW, true);
 
     //File bar
     std::vector<menuItem> fileBarItems;
-    menuItem newFile(point2(2, 23), point2(118, 53), point3(0, 0, 0), 1, "New", createNewFile);
-    menuItem openFile(point2(2, 58), point2(118, 88), point3(0, 0, 0), 1, "Open", openOtherFile);
-    menuItem saveFile(point2(2, 93), point2(118, 123), point3(0, 0, 0), 1, "Save as", saveCurrentFile);
+    menuItem newFile(point2(2, 43), point2(118, 73), point3(0, 0, 0), 1, "New", createNewFile, true);
+    menuItem openFile(point2(2, 78), point2(118, 108), point3(0, 0, 0), 1, "Open", openOtherFile, true);
+    menuItem saveFile(point2(2, 113), point2(118, 143), point3(0, 0, 0), 1, "Save as", saveCurrentFile, true);
     fileBarItems.emplace_back(newFile);
     fileBarItems.emplace_back(openFile);
     fileBarItems.emplace_back(saveFile);
 
-    menu fileMenu(point2(0, 21), point2(120, 124), point3(0, 255, 0), fileBarItems, "file-bar", COLUMN, false);
+    menu fileMenu(point2(0, 41), point2(120, 144), point3(0, 255, 0), fileBarItems, "file-bar", COLUMN, false);
+    //
+
+    //Tabs bar
+    std::vector<menuItem> tabs;
+    menuItem homeTab(point2(1, 21), point2(99, 39), point3(0, 0, 0), 1, "homeTab", showHomeTab, true);
+    tabs.emplace_back(homeTab);
+
+    menu tabMenu(point2(0, 20), point2((50 * 16), 40), point3(0, 0, 0), tabs, "tabs", ROW, true);
     //
 
     frameObjects.emplace_back(std::make_unique<menu>(mainMenu));
     frameObjects.emplace_back(std::make_unique<menu>(fileMenu));
+    frameObjects.emplace_back(std::make_unique<menu>(tabMenu));
 }
 
 int WINAPI WinMain (HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszArgument, int nCmdShow) {
@@ -169,6 +196,9 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
 {
     switch (message)                  /* handle the messages */
     {
+        case WM_CREATE: {
+            //HWND editCtrl = CreateWindowEx(0, "EDIT", "", WS_CHILD | WS_VISIBLE | WS_BORDER, 10, 10, 200, 20, hwnd, (HMENU)1, NULL, NULL);
+        } break;
         case WM_PAINT: {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
@@ -184,7 +214,9 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 if (menuObj && menuObj->isVisable()) {
                     drawBox(hdc, menuObj->getMin(), menuObj->getMax(), menuObj->getColor(), menuObj->getLineSize());
                     for (const auto& menItem : menuObj->getItems()) {
-                        drawBox(hdc, menItem.getMin(), menItem.getMax(), menItem.getColor(), menItem.getLineSize());
+                        if (menItem.hasBorder()) {
+                            drawBox(hdc, menItem.getMin(), menItem.getMax(), menItem.getColor(), menItem.getLineSize());
+                        }
                         RECT textArea;
                         textArea.left = menItem.getMin().x_i;
                         textArea.top = menItem.getMin().y_i;
@@ -194,8 +226,6 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     }
                 }
             }
-
-            //drawBox(hdc, point2(10, 10), point2(110, 110), point3(255, 0, 0), 1);
 
             SelectObject(hdc, hOldPen);
             DeleteObject(hPen);
